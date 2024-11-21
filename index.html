@@ -1,0 +1,169 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML preview</title>
+    <style>
+      html {
+        background-color: black;
+      }
+      
+      body {
+          align-items: center;
+          justify-content: center;
+          display: flex;
+      }
+      svg path {
+        fill: white;
+        stroke: black;
+        stroke-width: 0.5;
+        transition: fill 1s, filter 0.2s ease;
+        cursor: pointer; /* Добавим курсор указателя */
+      }
+
+      svg path[title='Crimea'], svg path[title="Sevastpol' City"] {
+        fill: gray !important;
+      }
+
+      .alert {
+        fill: red !important; /* цвет для областей с тревогой */
+      }
+
+      #result {
+        margin-top: 20px;
+      }
+
+      
+      #info-box {
+        position: absolute;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        font-family: "Segoe UI", sans-serif;
+        padding: 10px;
+        transition: 0.2s, width 0.5s, height 0.5s;
+        border-radius: 5px;
+        display: none; /* Скрыт по умолчанию */
+        font-size: 14px;
+      }
+      .map {
+          position: absolute;
+      }
+      
+      .s {
+          font-family: "Segoe UI", sans-serif;
+          position: absolute;
+          bottom: 89%;
+          color: white;
+      }
+      
+      .ss {
+          font-family: "Segoe UI", sans-serif;
+          position: absolute;
+          bottom: 86%;
+          opacity: 0.3;
+          color: white;
+      }
+    </style>
+  </head>
+  <body>
+      <h1 class='s'>Мапа тривог України</h1>
+      <h3 class='ss'>Реалізовано використовуючи публічне API</h3>
+    <div id="map-container" class='map'>
+    </div>
+    <p id="result"> </p>
+
+    <!-- Информационный квадратик -->
+    <div id="info-box" style="display: none; top: 153.967px; left: 549.732px;">
+      <strong>Луганська область</strong><br>Last alert: Now
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+      const regionMapping = {
+        "Вінницька область": "Vinnytsya",
+        "Волинська область": "Volyn",
+        "Дніпропетровська область": "Dnipropetrovs'k",
+        "Донецька область": "Donets'k",
+        "Житомирська область": "Zhytomyr",
+        "Закарпатська область": "Transcarpathia",
+        "Запорізька область": "Zaporizhzhya",
+        "Івано-Франківська область": "Ivano-Frankivs'k",
+        "Київська область": "Kiev",
+        "Кіровоградська область": "Kirovohrad",
+        "Луганська область": "Luhans'k",
+        "Львівська область": "L'viv",
+        "Миколаївська область": "Mykolayiv",
+        "Одеська область": "Odessa",
+        "Полтавська область": "Poltava",
+        "Рівненська область": "Rivne",
+        "Сумська область": "Sumy",
+        "Тернопільська область": "Ternopil'",
+        "Харківська область": "Kharkiv",
+        "Херсонська область": "Kherson",
+        "Хмельницька область": "Khmel'nyts'kyy",
+        "Черкаська область": "Cherkasy",
+        "Чернівецька область": "Chernivtsi",
+        "Чернігівська область": "Chernihiv",
+        "м. Київ": "Kiev City 1",
+        "АР Крим": "Crimea",
+        "м. Севастополь": "Sevastopol"
+      };
+
+      // Функция для обновления карты
+      function updateMap() {
+        axios({
+          method: 'get',
+          url: 'https://cors-anywhere.herokuapp.com/https://ubilling.net.ua/aerialalerts/',
+        }).then(response => {
+          const alertData = response.data;
+          // Загружаем SVG карту Украины
+          fetch('https://jackmophin.github.io/local/unsorted/ukraine.svg').then(response => response.text()).then(svgData => {
+            document.getElementById('map-container').innerHTML = svgData;
+            const paths = document.querySelectorAll('svg path');
+            console.log(`Found ${paths.length} paths`);
+
+            paths.forEach(path => {
+              const region = path.getAttribute('title');
+
+              const key = Object.keys(regionMapping).find(key => regionMapping[key].toLowerCase() === region.toLowerCase());
+
+              if (key && alertData.states[key] && alertData.states[key].alertnow) {
+                path.classList.add('alert');
+              }
+
+              path.addEventListener('mouseover', () => {
+                path.style.filter = 'brightness(0.8)';
+                const regionName = key;
+                let lastAlertDate = alertData.states[key] ? alertData.states[key].changed : 'No data';
+                if (alertData.states[key].alertnow) {
+                  lastAlertDate = "Наразі триває";
+                }
+
+                const infoBox = document.getElementById('info-box');
+                infoBox.innerHTML = `<strong>${regionName}</strong><br>Остання тривога: ${lastAlertDate}`;
+                infoBox.style.display = 'block';
+                infoBox.style.top = `${path.getBoundingClientRect().top - 50}px`;
+                infoBox.style.left = `${path.getBoundingClientRect().left + 10}px`;
+              });
+
+              path.addEventListener('mouseout', () => {
+                path.style.filter = 'brightness(1)';
+                const infoBox = document.getElementById('info-box');
+                infoBox.style.display = 'none';
+              });
+            });
+
+            document.getElementById('result').innerText = "Map loaded with alerts.";
+          });
+        }).catch(error => {
+          document.getElementById('result').innerText = `${error.message}`;
+        });
+      }
+
+      setInterval(updateMap, 10000);
+      
+      
+      updateMap();
+    </script>
+  </body>
+</html>
